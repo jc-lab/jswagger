@@ -1,0 +1,66 @@
+{
+  "name": "jswagger",
+  "version": "0.0.2",
+  "description": "",
+  "scripts": {
+    "install:common": "cd packages/common && npm install",
+    "test:common": "cd packages/common && npm run test",
+    "build:common": "cd packages/common && npm run build",
+    "publish:common": "npm run publish:common:publish && npm run packages:set-versions && npm run installs:without-common",
+    "publish:common:publish": "cd packages/common && npm publish",
+    "install:generator": "cd packages/generator && npm install",
+    "test:generator": "cd packages/generator && npm run test",
+    "build:generator": "cd packages/generator && npm run build",
+    "publish:generator": "cd packages/generator && npm publish",
+    "lint:generator": "eslint --ext \".js,.ts\" ./packages/generator/",
+    "lint:fix:generator": "eslint --ext \".js,.ts\" --fix ./packages/generator/",
+    "install:client": "cd packages/client && npm install",
+    "test:client": "cd packages/client && npm run test",
+    "build:client": "cd packages/client && npm run build",
+    "publish:client": "cd packages/client && npm publish",
+    "lint:client": "eslint --ext \".js,.ts\" packages/client/",
+    "lint:fix:client": "eslint --ext \".js,.ts\" --fix packages/client/",
+    "test:root:mocha": "mocha -r ts-node/register --recursive ./test/**/*.ts",
+    "tests": "npm run lint && npm run test:common && npm run test:generator && npm run test:client && npm run test:root:mocha",
+    "builds": "npm run build:common && npm run build:generator && npm run build:client",
+    "packages:set-versions": "node ./scripts/set-versions.js",
+    "publishes": "npm run publish:common && npm run publish:generator && npm run publish:client",
+    "installs:without-common": "npm run install:generator && npm run install:client",
+    "installs": "npm run install:common && npm run install:generator && npm run install:client",
+    "postinstall": "npm run installs",
+    "lint": "eslint --ext \".js,.ts\" ./",
+    "lint:fix": "eslint --ext \".js,.ts\" --fix ./",
+    "test": "npm run tests",
+    "build": "npm run packages:set-versions && npm run builds"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jc-lab/jswagger.js.git"
+  },
+  "keywords": [
+    "jswagger",
+    "swagger",
+    "swagger-javascript",
+    "swagger-typescript"
+  ],
+  "author": {
+    "name": "Joseph Lee",
+    "email": "development@jc-lab.net"
+  },
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/jc-lab/jswagger.js/issues"
+  },
+  "homepage": "https://github.com/jc-lab/jswagger.js#readme",
+  "devDependencies": {
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^13.13.5",
+    "@typescript-eslint/eslint-plugin": "^2.31.0",
+    "@typescript-eslint/parser": "^2.31.0",
+    "chai": "^4.2.0",
+    "eslint": "^6.8.0",
+    "mocha": "^7.1.2",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.8.3"
+  }
+}

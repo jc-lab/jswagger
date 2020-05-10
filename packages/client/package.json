@@ -1,0 +1,51 @@
+{
+  "name": "jswagger-client",
+  "version": "0.0.2",
+  "description": "",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "tsc": "tsc",
+    "test": "npm run test:tsc && npm run test:mocha",
+    "test:tsc": "tsc --noEmit",
+    "test:mocha": "mocha -r ts-node/register --recursive ./test/**/*.ts",
+    "build": "tsc",
+    "prepack": "npm run test && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jc-lab/jswagger.js.git"
+  },
+  "author": {
+    "name": "Joseph Lee",
+    "email": "development@jc-lab.net"
+  },
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/jc-lab/jswagger.js/issues"
+  },
+  "homepage": "https://github.com/jc-lab/jswagger.js#readme",
+  "keywords": [
+    "jswagger",
+    "swagger",
+    "swagger-javascript",
+    "swagger-typescript"
+  ],
+  "devDependencies": {
+    "@types/axios": "^0.14.0",
+    "@types/bignumber.js": "^5.0.0",
+    "@types/mocha": "^7.0.2",
+    "@types/node": "^13.13.5",
+    "chai": "^4.2.0",
+    "mocha": "^7.1.2",
+    "ts-node": "^8.10.1",
+    "tsc": "^1.20150623.0",
+    "typescript": "^3.8.3"
+  },
+  "dependencies": {
+    "axios": "^0.19.2",
+    "bignumber.js": "^9.0.0",
+    "jswagger-common": "0.0.2",
+    "node-json-bigint": "^1.0.1"
+  }
+}
