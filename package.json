@@ -1,12 +1,12 @@
 {
   "name": "jswagger",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "",
   "scripts": {
     "install:common": "cd packages/common && npm install",
     "test:common": "cd packages/common && npm run test",
     "build:common": "cd packages/common && npm run build",
-    "publish:common": "npm run publish:common:publish && npm run packages:set-versions && npm run installs:without-common",
+    "publish:common": "npm run packages:set-versions && npm run publish:common:publish && npm run installs:without-common",
     "publish:common:publish": "cd packages/common && npm publish",
     "install:generator": "cd packages/generator && npm install",
     "test:generator": "cd packages/generator && npm run test",
