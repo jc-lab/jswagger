@@ -1,9 +1,10 @@
 import * as types from './types';
-import SwaggerClient from './client';
+import _SwaggerClient from './client';
 import * as internals from './internals';
 
 declare namespace index {
   export type ISwaggerClientConfig = types.ISwaggerClientConfig;
+  export type SwaggerClient = _SwaggerClient;
   export type ApiRequestOptionsRX<D, H> = types.ApiRequestOptionsRX<D, H>;
   export type ApiRequestOptionsRO<D, H> = types.ApiRequestOptionsRO<D, H>;
   export type ApiRequestOptionsRR<D, H> = types.ApiRequestOptionsRR<D, H>;
@@ -19,8 +20,8 @@ declare namespace index {
   export const internal: typeof internals;
 }
 
-function index(config: types.ISwaggerClientConfig): SwaggerClient {
-  return new SwaggerClient(config);
+function index(config: types.ISwaggerClientConfig): _SwaggerClient {
+  return new _SwaggerClient(config);
 }
 
 Object.defineProperty(index, 'internal', {
