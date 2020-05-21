@@ -8,6 +8,29 @@ import {
 
 type PropertiesType = { [index: string]: OpenAPI2SchemaObject | OpenAPI2Reference };
 
+interface IPropInfo {
+  type?: string;
+  format?: string;
+}
+
+export function leafConvertToClassValue(propInfo: IPropInfo, input: any): any {
+  if (propInfo.type === 'string' && propInfo.format === 'date-time') {
+    return new Date(input);
+  } else if (propInfo.type === 'string' && propInfo.format === 'byte') {
+    return Buffer.from(input, 'binary');
+  }
+  return input;
+}
+
+export function leafConvertToJsonValue(propInfo: IPropInfo, input: any): any {
+  if (propInfo.type === 'string' && propInfo.format === 'date-time' && input instanceof Date) {
+    return input.toISOString();
+  } else if (propInfo.type === 'string' && propInfo.format === 'byte' && Buffer.isBuffer(input)) {
+    return (input as Buffer).toString('binary');
+  }
+  return input;
+}
+
 export function toClassValue(metadata: ISpecMetadata, property: PropertiesType, key: string, value: any): any {
   const lastKey = key.split('/').reduce((prev, cur) => cur, '');
   const propInfo: OpenAPI2SchemaObject = ((tmp) => {
@@ -24,12 +47,7 @@ export function toClassValue(metadata: ISpecMetadata, property: PropertiesType, 
       );
     }
   }
-  if (propInfo.type === 'string' && propInfo.format === 'date-time') {
-    return new Date(value);
-  } else if (propInfo.type === 'string' && propInfo.format === 'byte') {
-    return Buffer.from(value, 'ascii');
-  }
-  return value;
+  return leafConvertToClassValue(propInfo, value);
 }
 
 export function toJsonObject(metadata: ISpecMetadata, property: PropertiesType, key: string, value: any): any {
@@ -45,10 +63,5 @@ export function toJsonObject(metadata: ISpecMetadata, property: PropertiesType, 
       }, {}
     );
   }
-  if (propInfo.type === 'string' && propInfo.format === 'date-time' && value instanceof Date) {
-    return value.toISOString();
-  } else if (propInfo.type === 'string' && propInfo.format === 'byte' && Buffer.isBuffer(value)) {
-    return value.toJSON();
-  }
-  return value;
+  return leafConvertToJsonValue(propInfo, value);
 }
