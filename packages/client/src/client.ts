@@ -84,11 +84,11 @@ export default class SwaggerClient {
 
       Object.defineProperty(proxy, item.api.operationId, {
         get: () => function() {
-          const callOptions = arguments[0];
+          const callOptions: undefined | any = arguments[0];
           const securityContext: IApiSecurityContext | undefined =
             _options['securityContext'] || self._config.securityContext;
-          const optBody: any = callOptions['body'];
-          const optParams: { [key: string]: any } = callOptions['params'];
+          const optBody: undefined | any = callOptions && callOptions['body'];
+          const optParams: { [key: string]: any } | undefined = callOptions && callOptions['params'];
           const reqBody = optBody;
           let reqHeaders = {};
           let reqQueries = {};
