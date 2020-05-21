@@ -41,9 +41,28 @@ function jsonTransformResponse(data: any, headers: any): any {
   return data;
 }
 
+function urlConcat(a: string, b: string): string {
+  if (a.length && b.length) {
+    const ta = a.charAt(a.length - 1) === '/';
+    const tb = b.charAt(0) === '/';
+    if (ta === tb) {
+      if (ta) {
+        return a.concat(b.substring(1));
+      } else {
+        return a.concat('/', b);
+      }
+    }
+  }
+  return a.concat(b);
+}
+
 export default class SwaggerClient {
   private readonly _config: ISwaggerClientConfig;
   private readonly _baseUrl: string;
+
+  public static urlConcat(a: string, b: string): string {
+    return urlConcat(a, b);
+  }
 
   constructor(config: ISwaggerClientConfig) {
     this._config = config;
@@ -73,11 +92,6 @@ export default class SwaggerClient {
           return results;
         }, new Map<string, any>()
       );
-
-    const getDefinitionClass = (ref: string) => {
-
-
-    };
 
     apis.forEach(item => {
       let apiPath = item.path;
@@ -114,7 +128,7 @@ export default class SwaggerClient {
             });
           }
 
-          const apiUrl = new url.URL(self._baseUrl + apiPath);
+          const apiUrl = new url.URL(urlConcat(self._baseUrl, apiPath));
 
           if (securityContext) {
             if (securityContext.headerReplacer) {
