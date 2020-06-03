@@ -24,39 +24,49 @@ export interface ISwaggerApiOptions {
   securityContext?: IApiSecurityContext;
 }
 
-export interface ApiRequestOptions<T, P> extends AxiosRequestConfig {
+export interface ApiRequestOptions extends AxiosRequestConfig {
+  /**
+   * Override protocol
+   */
+  protocol?: string;
+  /**
+   * Override host
+   *
+   * e.g. 1.2.3.4:321
+   */
+  host?: string;
   securityContext?: IApiSecurityContext;
   queries?: Record<string, any>;
 }
 
-export interface ApiRequestOptionsRX<T, P> extends ApiRequestOptions<T, P> {
+export interface ApiRequestOptionsRX<T, P> extends ApiRequestOptions {
   data: T;
 }
-export interface ApiRequestOptionsRO<T, P> extends ApiRequestOptions<T, P> {
+export interface ApiRequestOptionsRO<T, P> extends ApiRequestOptions {
   data: T;
   params?: P;
 }
-export interface ApiRequestOptionsRR<T, P> extends ApiRequestOptions<T, P> {
+export interface ApiRequestOptionsRR<T, P> extends ApiRequestOptions {
   data: T;
   params: P;
 }
-export interface ApiRequestOptionsOX<T, P> extends ApiRequestOptions<T, P> {
+export interface ApiRequestOptionsOX<T, P> extends ApiRequestOptions {
   data?: T;
 }
-export interface ApiRequestOptionsOO<T, P> extends ApiRequestOptions<T, P> {
+export interface ApiRequestOptionsOO<T, P> extends ApiRequestOptions {
   data?: T;
   params?: P;
 }
-export interface ApiRequestOptionsOR<T, P> extends ApiRequestOptions<T, P> {
+export interface ApiRequestOptionsOR<T, P> extends ApiRequestOptions {
   data?: T;
   params: P;
 }
-export interface ApiRequestOptionsXX<T, P> extends ApiRequestOptions<T, P> {
+export interface ApiRequestOptionsXX<T, P> extends ApiRequestOptions {
 }
-export interface ApiRequestOptionsXO<T, P> extends ApiRequestOptions<T, P> {
+export interface ApiRequestOptionsXO<T, P> extends ApiRequestOptions {
   params?: P;
 }
-export interface ApiRequestOptionsXR<T, P> extends ApiRequestOptions<T, P> {
+export interface ApiRequestOptionsXR<T, P> extends ApiRequestOptions {
   params: P;
 }
 

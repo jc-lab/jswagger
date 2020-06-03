@@ -1,11 +1,11 @@
 import axios, {
-  AxiosError, AxiosRequestConfig, AxiosResponse
+  AxiosError, AxiosRequestConfig, AxiosResponse, AxiosTransformer
 } from 'axios';
 import JSONbig from 'node-json-bigint';
 import * as url from 'url';
 
 import {
-  ApiError, IApiMetadata,
+  ApiError, ApiRequestOptions, IApiMetadata,
   IApiSecurityContext,
   ISwaggerApiOptions,
   ISwaggerClientConfig
@@ -56,6 +56,18 @@ function urlConcat(a: string, b: string): string {
   return a.concat(b);
 }
 
+function concatHandlers<T>(first: T, others?: T | T[]): T[] {
+  if (others && others) {
+    if (Array.isArray(others)) {
+      return [first].concat(others);
+    } else {
+      return [first, others];
+    }
+  } else {
+    return [first];
+  }
+}
+
 export default class SwaggerClient {
   private readonly _config: ISwaggerClientConfig;
   private readonly _baseUrl: string;
@@ -99,6 +111,8 @@ export default class SwaggerClient {
       Object.defineProperty(proxy, item.api.operationId, {
         get: () => function() {
           const callOptions: undefined | any = arguments[0];
+          const apiRequestOptions: ApiRequestOptions | undefined =
+            callOptions && (callOptions as ApiRequestOptions);
           const securityContext: IApiSecurityContext | undefined =
             _options['securityContext'] || self._config.securityContext;
           const optBody: undefined | any = callOptions && callOptions['body'];
@@ -128,7 +142,14 @@ export default class SwaggerClient {
             });
           }
 
-          const apiUrl = new url.URL(urlConcat(self._baseUrl, apiPath));
+          const baseUrl = apiRequestOptions && apiRequestOptions.baseURL || self._baseUrl;
+          const apiUrl = new url.URL(urlConcat(baseUrl, apiPath));
+          if (apiRequestOptions && apiRequestOptions.protocol) {
+            apiUrl.protocol = apiRequestOptions.protocol;
+          }
+          if (apiRequestOptions && apiRequestOptions.host) {
+            apiUrl.host = apiRequestOptions.host;
+          }
 
           if (securityContext) {
             if (securityContext.headerReplacer) {
@@ -139,25 +160,39 @@ export default class SwaggerClient {
             }
           }
 
+          if (apiRequestOptions && apiRequestOptions.queries) {
+            Object.assign(reqQueries, apiRequestOptions.queries);
+          }
+          if (apiRequestOptions && apiRequestOptions.headers) {
+            Object.assign(reqHeaders, apiRequestOptions.headers);
+          }
+
+          const axioxRequestConfig = Object.assign({}, apiRequestOptions || {});
+          if (axioxRequestConfig['securityContext']) delete axioxRequestConfig['securityContext'];
+          if (axioxRequestConfig['queries']) delete axioxRequestConfig['queries'];
+          if (axioxRequestConfig['data']) delete axioxRequestConfig['data'];
+          if (axioxRequestConfig['baseURL']) delete axioxRequestConfig['baseURL'];
+          Object.assign(
+            axioxRequestConfig,
+            {
+              headers: reqHeaders,
+              params: reqQueries,
+              httpAgent: self._config.httpAgent,
+              httpsAgent: self._config.httpsAgent,
+              transformResponse: concatHandlers<AxiosTransformer>(
+                jsonTransformResponse,
+                apiRequestOptions && apiRequestOptions.transformResponse
+              )
+            }
+          );
+
           return ((() => {
             if (['get', 'delete', 'head', 'options'].includes(item.method)) {
               type CallType = (url: string, config: AxiosRequestConfig) => Promise<AxiosResponse>;
-              return (axios[item.method] as CallType)(apiUrl.toString(), {
-                headers: reqHeaders,
-                params: reqQueries,
-                httpAgent: self._config.httpAgent,
-                httpsAgent: self._config.httpsAgent,
-                transformResponse: jsonTransformResponse
-              });
+              return (axios[item.method] as CallType)(apiUrl.toString(), axioxRequestConfig);
             } else {
               type CallType = (url: string, data: any, config: AxiosRequestConfig) => Promise<AxiosResponse>;
-              return (axios[item.method] as CallType)(apiUrl.toString(), reqBody, {
-                headers: reqHeaders,
-                params: reqQueries,
-                httpAgent: self._config.httpAgent,
-                httpsAgent: self._config.httpsAgent,
-                transformResponse: jsonTransformResponse
-              });
+              return (axios[item.method] as CallType)(apiUrl.toString(), reqBody, axioxRequestConfig);
             }
           })())
             .then(res => {
