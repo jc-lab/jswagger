@@ -15,14 +15,15 @@ import {
 } from '../packages/common/src/types';
 import generator from '../packages/generator/src';
 import jsclient, {
-  SwaggerClient
+  SwaggerClient,
+  ISwaggerClientConfig
 } from '../packages/client/src';
 
 import * as TestInterface1 from '../test-resource/test-api-1';
 
 let generated = false;
 
-function createTestClient(spec: OpenAPI2): SwaggerClient {
+function createTestClient(spec: OpenAPI2, appendOptions?: Partial<ISwaggerClientConfig>): SwaggerClient {
   if (!generated) {
     generated = true;
 
@@ -44,11 +45,14 @@ function createTestClient(spec: OpenAPI2): SwaggerClient {
   }
 
   return jsclient({
-    spec: spec
+    spec: spec,
+    ...appendOptions
   });
 }
 
 describe('OpenAPI2 Test', function () {
+  this.timeout(5000);
+
   const spec: OpenAPI2 = require(
     path.resolve(path.join(__dirname, '../test-resource/test-api-1-spec.json'))
   );
@@ -99,6 +103,58 @@ describe('OpenAPI2 Test', function () {
         timestamp: new Date().toISOString()
       }
     });
+
+    expect(result.status).eq(200);
+
+    expect(result.data.code).eq(0);
+    expect(typeof result.data.message).eq('string');
+    expect(typeof result.data.result).eq('object');
+    if (!result.data.result) {
+      return ;
+    }
+
+    expect(result.data.result.number32).eq(123456789);
+    expect(BigNumber.isBigNumber(result.data.result.number64)).eq(true);
+    expect(new BigNumber('1311768465173141112').eq(result.data.result.number64 as any)).eq(true);
+    expect(result.data.result.simpleText).eq('hello world');
+    expect(result.data.result.binaryText).eql(Buffer.from([0x00, 0x01, 0x02, 0xff]));
+    expect((result.data.result.timestamp as any) instanceof Date).eq(true);
+  });
+
+  it('retry test', async function () {
+    let testCount = 0;
+
+    const client = createTestClient(spec, {
+      retryHandler: (params, retryCount, err) => {
+        testCount++;
+        expect(testCount).eq(1);
+        return Promise.resolve(100);
+      },
+      hostRewriter: params => {
+        if (testCount === 0) {
+          return {
+            host: 'nothing.nothing'
+          };
+        } else {
+          return undefined;
+        }
+      }
+    });
+    const testApi: TestInterface1.TestApi = client.api<TestInterface1.TestApi>(
+      TestInterface1.APIS.TestApi
+    );
+
+    const result = await testApi.getManyTypes({
+      data: {
+        number32: 1234,
+        number64: 12345,
+        simpleText: 'hello',
+        binaryText: 'world',
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    expect(testCount).eq(1);
 
     expect(result.status).eq(200);
 
