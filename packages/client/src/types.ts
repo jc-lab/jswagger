@@ -13,7 +13,7 @@ import {
 
 export interface IRewriterParams {
   operationId: string;
-  arg: ApiRequestOptionsOO<any, any>;
+  arg?: ApiRequestOptionsOO<any, any>;
 }
 
 export type HostRewriter = (params: IRewriterParams) => {
@@ -21,6 +21,8 @@ export type HostRewriter = (params: IRewriterParams) => {
 } | undefined;
 
 export type UrlRewriter = (params: IRewriterParams, originalUrl: url.URL) => url.URL | undefined;
+
+export type ArgRewriter = (params: IRewriterParams) => ApiRequestOptionsOO<any, any> | undefined;
 
 /**
  * @return
@@ -37,6 +39,7 @@ export interface ISwaggerClientConfig {
   httpAgent?: http.Agent;
   httpsAgent?: https.Agent;
   securityContext?: IApiSecurityContext;
+  argRewriter?: ArgRewriter;
   hostRewriter?: HostRewriter;
   urlRewriter?: UrlRewriter;
   retryHandler?: RetryHandler;

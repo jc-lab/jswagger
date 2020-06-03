@@ -5,7 +5,7 @@ import JSONbig from 'node-json-bigint';
 import * as url from 'url';
 
 import {
-  ApiError, ApiRequestOptions, IApiMetadata,
+  ApiError, ApiRequestOptions, ApiRequestOptionsOO, IApiMetadata,
   IApiSecurityContext,
   IRewriterParams,
   ISwaggerApiOptions,
@@ -119,23 +119,37 @@ export default class SwaggerClient {
 
       Object.defineProperty(proxy, item.api.operationId, {
         get: () => function() {
-          const callOptions: undefined | any = arguments[0];
-          const apiRequestOptions: ApiRequestOptions | undefined =
-            callOptions && (callOptions as ApiRequestOptions);
-          const securityContext: IApiSecurityContext | undefined =
-            _options['securityContext'] || self._config.securityContext;
-          const optBody: undefined | any = callOptions && callOptions['body'];
-          const optParams: { [key: string]: any } | undefined = callOptions && callOptions['params'];
-          const reqBody = optBody;
-          const baseUrl = apiRequestOptions && apiRequestOptions.baseURL || self._baseUrl;
+          let callOptions: undefined | ApiRequestOptionsOO<any, any> = arguments[0];
+          let retryCount = 0;
 
-          const rewriterParams: IRewriterParams = {
+          const retryParams: IRewriterParams = {
             operationId: item.api.operationId,
             arg: callOptions
           };
-          let retryCount = 0;
 
           const doExecute = () => {
+            if (self._config.argRewriter) {
+              const replaced = self._config.argRewriter({
+                operationId: item.api.operationId,
+                arg: callOptions && Object.assign({}, callOptions)
+              });
+              callOptions = replaced || callOptions;
+            }
+
+            const apiRequestOptions: ApiRequestOptions | undefined =
+              callOptions && (callOptions as ApiRequestOptions);
+            const securityContext: IApiSecurityContext | undefined =
+              _options['securityContext'] || self._config.securityContext;
+            const optBody: undefined | any = callOptions && callOptions['body'];
+            const optParams: { [key: string]: any } | undefined = callOptions && callOptions['params'];
+            const reqBody = optBody;
+            const baseUrl = apiRequestOptions && apiRequestOptions.baseURL || self._baseUrl;
+
+            const rewriterParams: IRewriterParams = {
+              operationId: item.api.operationId,
+              arg: callOptions
+            };
+
             let reqHeaders = {};
             let reqQueries = {};
 
@@ -274,7 +288,7 @@ export default class SwaggerClient {
               .then(resolve)
               .catch(e => {
                 if (self._config.retryHandler) {
-                  safePromiseCallback(self._config.retryHandler.bind(null, rewriterParams, retryCount++, e))
+                  safePromiseCallback(self._config.retryHandler.bind(null, retryParams, retryCount++, e))
                     .then(delay => {
                       if (delay < 0 || delay === false) {
                         reject(e);
