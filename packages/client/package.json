@@ -1,6 +1,6 @@
 {
   "name": "jswagger-client",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -45,7 +45,7 @@
   "dependencies": {
     "axios": "^0.19.2",
     "bignumber.js": "^9.0.0",
-    "jswagger-common": "0.0.7",
+    "jswagger-common": "0.0.8",
     "node-json-bigint": "^1.0.1"
   }
 }
