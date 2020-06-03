@@ -31,7 +31,8 @@
     "lint": "eslint --ext \".js,.ts\" ./",
     "lint:fix": "eslint --ext \".js,.ts\" --fix ./",
     "test": "npm run tests",
-    "build": "npm run packages:set-versions && npm run builds"
+    "build": "npm run packages:set-versions && npm run builds",
+    "prepublishOnly": "exit 1"
   },
   "repository": {
     "type": "git",
