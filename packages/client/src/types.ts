@@ -22,6 +22,13 @@ export type HostRewriter = (params: IRewriterParams) => {
 
 export type UrlRewriter = (params: IRewriterParams, originalUrl: url.URL) => url.URL | undefined;
 
+/**
+ * @return
+ *  value >= 0 : retry after *value* ms
+ *  false or value < 0 : stop
+ */
+export type RetryHandler = (params: IRewriterParams, retryCount: number, err: any) => Promise<number | false>;
+
 export interface ISwaggerClientConfig {
   spec: OpenAPI2;
   protocol?: string;
@@ -32,6 +39,7 @@ export interface ISwaggerClientConfig {
   securityContext?: IApiSecurityContext;
   hostRewriter?: HostRewriter;
   urlRewriter?: UrlRewriter;
+  retryHandler?: RetryHandler;
 }
 
 export interface ISwaggerApiOptions {
