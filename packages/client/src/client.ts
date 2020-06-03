@@ -7,6 +7,7 @@ import * as url from 'url';
 import {
   ApiError, ApiRequestOptions, IApiMetadata,
   IApiSecurityContext,
+  IRewriterParams,
   ISwaggerApiOptions,
   ISwaggerClientConfig
 } from './types';
@@ -143,12 +144,29 @@ export default class SwaggerClient {
           }
 
           const baseUrl = apiRequestOptions && apiRequestOptions.baseURL || self._baseUrl;
-          const apiUrl = new url.URL(urlConcat(baseUrl, apiPath));
+          let apiUrl = new url.URL(urlConcat(baseUrl, apiPath));
           if (apiRequestOptions && apiRequestOptions.protocol) {
             apiUrl.protocol = apiRequestOptions.protocol;
           }
           if (apiRequestOptions && apiRequestOptions.host) {
             apiUrl.host = apiRequestOptions.host;
+          }
+
+          const rewriterParams: IRewriterParams = {
+            operationId: item.api.operationId,
+            arg: callOptions
+          };
+
+          if (self._config.hostRewriter) {
+            const result = self._config.hostRewriter(rewriterParams);
+            if (result) {
+              apiUrl.protocol = result.protocol || apiUrl.protocol;
+              apiUrl.host = result.host || apiUrl.host;
+            }
+          }
+          if (self._config.urlRewriter) {
+            const result = self._config.urlRewriter(rewriterParams, apiUrl);
+            apiUrl = result || apiUrl;
           }
 
           if (securityContext) {

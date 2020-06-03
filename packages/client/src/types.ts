@@ -6,9 +6,21 @@ import {
 } from 'jswagger-common';
 import * as http from 'http';
 import * as https from 'https';
+import * as url from 'url';
 import {
   OpenAPI2Reference, OpenAPI2SchemaObject
 } from 'jswagger-common/src/types/OpenAPI2';
+
+export interface IRewriterParams {
+  operationId: string;
+  arg: ApiRequestOptionsOO<any, any>;
+}
+
+export type HostRewriter = (params: IRewriterParams) => {
+  protocol?: string, host?: string
+} | undefined;
+
+export type UrlRewriter = (params: IRewriterParams, originalUrl: url.URL) => url.URL | undefined;
 
 export interface ISwaggerClientConfig {
   spec: OpenAPI2;
@@ -18,6 +30,8 @@ export interface ISwaggerClientConfig {
   httpAgent?: http.Agent;
   httpsAgent?: https.Agent;
   securityContext?: IApiSecurityContext;
+  hostRewriter?: HostRewriter;
+  urlRewriter?: UrlRewriter;
 }
 
 export interface ISwaggerApiOptions {
