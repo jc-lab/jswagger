@@ -14,6 +14,9 @@ import {
 import {
   findApisByTag
 } from 'jswagger-common';
+import {
+  leafConvertToClassValue
+} from './internals';
 
 function extractRef(ref: string): {
   type: string,
@@ -247,6 +250,8 @@ export default class SwaggerClient {
                   out.data = new responseClazz({
                     schema: res.data
                   });
+                } else if (responseDefinition && responseDefinition.schema) {
+                  out.data = leafConvertToClassValue(responseDefinition.schema as any, res.data);
                 }
                 return out;
               })

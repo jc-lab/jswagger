@@ -127,7 +127,9 @@ export function generateTypesOnly(
       return list.join(' | ');
     }
   } else {
-    return transform(node);
+    return transform(node, {
+      classMode: !!(flags & GenerateTypesOnlyFlag.CLASS)
+    });
   }
 }
 
