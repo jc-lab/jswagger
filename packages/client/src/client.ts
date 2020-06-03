@@ -15,6 +15,7 @@ import {
   findApisByTag
 } from 'jswagger-common';
 import {
+  arrayBufferToBuffer,
   leafConvertToClassValue
 } from './internals';
 
@@ -36,10 +37,8 @@ const REGEX_CONTENT_TYPE_APPLICATION_JSON = /application\/json(?:\s*;\s*charset=
 function jsonTransformResponse(data: any, headers: any): any {
   const jsonCheck = headers['content-type'] && REGEX_CONTENT_TYPE_APPLICATION_JSON.exec(headers['content-type']);
   if (jsonCheck) {
-    let text = data;
-    if (jsonCheck[1]) {
-      text = Buffer.from(data, jsonCheck[1] as BufferEncoding).toString('utf8');
-    }
+    const text = (Buffer.isBuffer(data) ? data : arrayBufferToBuffer(data))
+      .toString(jsonCheck[1] || 'utf8');
     return JSONbig.parse(text);
   }
   return data;
@@ -221,6 +220,7 @@ export default class SwaggerClient {
             Object.assign(
               axioxRequestConfig,
               {
+                responseType: 'arraybuffer',
                 headers: reqHeaders,
                 params: reqQueries,
                 httpAgent: self._config.httpAgent,

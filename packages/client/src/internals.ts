@@ -65,3 +65,20 @@ export function toJsonObject(metadata: ISpecMetadata, property: PropertiesType, 
   }
   return leafConvertToJsonValue(propInfo, value);
 }
+
+const isArrayBufferSupported = (new Buffer(new Uint8Array([1]).buffer)[0] === 1);
+
+function arrayBufferToBufferAsArgument(ab: ArrayBuffer): Buffer {
+  return new Buffer(ab);
+}
+
+function arrayBufferToBufferCycle(ab: ArrayBuffer): Buffer {
+  const buffer = new Buffer(ab.byteLength);
+  const view = new Uint8Array(ab);
+  for (let i = 0; i < buffer.length; ++i) {
+    buffer[i] = view[i];
+  }
+  return buffer;
+}
+
+export const arrayBufferToBuffer = isArrayBufferSupported ? arrayBufferToBufferAsArgument : arrayBufferToBufferCycle;
