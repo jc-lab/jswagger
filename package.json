@@ -1,6 +1,6 @@
 {
   "name": "jswagger",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "",
   "scripts": {
     "install:common": "cd packages/common && npm install",
