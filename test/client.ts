@@ -117,6 +117,7 @@ describe('OpenAPI2 Test', function () {
     expect(BigNumber.isBigNumber(result.data.result.number64)).eq(true);
     expect(new BigNumber('1311768465173141112').eq(result.data.result.number64 as any)).eq(true);
     expect(result.data.result.simpleText).eq('hello world');
+    expect(Buffer.isBuffer(result.data.result.binaryText)).eq(true);
     expect(result.data.result.binaryText).eql(Buffer.from([0x00, 0x01, 0x02, 0xff]));
     expect((result.data.result.timestamp as any) instanceof Date).eq(true);
   });
@@ -169,6 +170,7 @@ describe('OpenAPI2 Test', function () {
     expect(BigNumber.isBigNumber(result.data.result.number64)).eq(true);
     expect(new BigNumber('1311768465173141112').eq(result.data.result.number64 as any)).eq(true);
     expect(result.data.result.simpleText).eq('hello world');
+    expect(Buffer.isBuffer(result.data.result.binaryText)).eq(true);
     expect(result.data.result.binaryText).eql(Buffer.from([0x00, 0x01, 0x02, 0xff]));
     expect((result.data.result.timestamp as any) instanceof Date).eq(true);
   });
