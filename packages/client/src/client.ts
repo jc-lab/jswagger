@@ -34,14 +34,26 @@ function extractRef(ref: string): {
 }
 
 const REGEX_CONTENT_TYPE_APPLICATION_JSON = /application\/json(?:\s*;\s*charset=([a-zA-Z0-9_-]+))?/;
-function jsonTransformResponse(data: any, headers: any): any {
+const REGEX_CONTENT_TYPE_TEXT = /text\/([^;]+)(?:\s*;\s*charset=([a-zA-Z0-9_-]+))?/;
+
+function toBufferEncoding(input: string | undefined) {
+  return (input && input.toUpperCase().startsWith('ISO-8859') && 'ascii') || input || 'utf8';
+}
+
+function basicTransformResponse(data: any, headers: any): any {
   const jsonCheck = headers['content-type'] && REGEX_CONTENT_TYPE_APPLICATION_JSON.exec(headers['content-type']);
+  const textCheck = jsonCheck ? null : headers['content-type'] && REGEX_CONTENT_TYPE_TEXT.exec(headers['content-type']);
+  const dataBuffer: Buffer = (Buffer.isBuffer(data) ? data : arrayBufferToBuffer(data));
+  const encoding = toBufferEncoding(jsonCheck ? jsonCheck[1] : textCheck ? textCheck[2] : undefined);
+
   if (jsonCheck) {
-    const text = (Buffer.isBuffer(data) ? data : arrayBufferToBuffer(data))
-      .toString(jsonCheck[1] || 'utf8');
+    const text = dataBuffer.toString(encoding);
     return JSONbig.parse(text);
+  } else if (textCheck) {
+    return dataBuffer.toString(encoding);
   }
-  return data;
+
+  return dataBuffer;
 }
 
 function urlConcat(a: string, b: string): string {
@@ -226,7 +238,7 @@ export default class SwaggerClient {
                 httpAgent: self._config.httpAgent,
                 httpsAgent: self._config.httpsAgent,
                 transformResponse: concatHandlers<AxiosTransformer>(
-                  jsonTransformResponse,
+                  basicTransformResponse,
                   apiRequestOptions && apiRequestOptions.transformResponse
                 )
               }
