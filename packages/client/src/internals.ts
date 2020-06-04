@@ -69,11 +69,11 @@ export function toJsonObject(metadata: ISpecMetadata, property: PropertiesType, 
 const isArrayBufferSupported = (new Buffer(new Uint8Array([1]).buffer)[0] === 1);
 
 function arrayBufferToBufferAsArgument(ab: ArrayBuffer): Buffer {
-  return new Buffer(ab);
+  return Buffer.from(ab);
 }
 
 function arrayBufferToBufferCycle(ab: ArrayBuffer): Buffer {
-  const buffer = new Buffer(ab.byteLength);
+  const buffer = Buffer.alloc(ab.byteLength);
   const view = new Uint8Array(ab);
   for (let i = 0; i < buffer.length; ++i) {
     buffer[i] = view[i];
