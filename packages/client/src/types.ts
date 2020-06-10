@@ -49,6 +49,11 @@ export interface ISwaggerApiOptions {
   securityContext?: IApiSecurityContext;
 }
 
+export interface QueryKeyValue {
+  name: string;
+  value: string;
+}
+
 export interface ApiRequestOptions extends AxiosRequestConfig {
   /**
    * Override protocol
@@ -61,7 +66,7 @@ export interface ApiRequestOptions extends AxiosRequestConfig {
    */
   host?: string;
   securityContext?: IApiSecurityContext;
-  queries?: Record<string, any>;
+  queries?: QueryKeyValue[];
 }
 
 export interface ApiRequestOptionsRX<T, P> extends ApiRequestOptions {

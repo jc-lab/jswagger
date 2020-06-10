@@ -3,6 +3,7 @@ import axios, {
 } from 'axios';
 import JSONbig from 'node-json-bigint';
 import * as url from 'url';
+import * as querystring from 'querystring';
 
 import {
   ApiError, ApiRequestOptions, ApiRequestOptionsOO, IApiMetadata,
@@ -217,8 +218,15 @@ export default class SwaggerClient {
               }
             }
 
+            Object.keys(reqQueries)
+              .forEach(k => {
+                apiUrl.searchParams.append(k, reqQueries[k]);
+              });
+
             if (apiRequestOptions && apiRequestOptions.queries) {
-              Object.assign(reqQueries, apiRequestOptions.queries);
+              apiRequestOptions.queries.forEach(o => {
+                apiUrl.searchParams.append(o.name, o.value);
+              });
             }
             if (apiRequestOptions && apiRequestOptions.headers) {
               Object.assign(reqHeaders, apiRequestOptions.headers);
@@ -234,7 +242,6 @@ export default class SwaggerClient {
               {
                 responseType: 'arraybuffer',
                 headers: reqHeaders,
-                params: reqQueries,
                 httpAgent: self._config.httpAgent,
                 httpsAgent: self._config.httpsAgent,
                 transformResponse: concatHandlers<AxiosTransformer>(
@@ -243,7 +250,6 @@ export default class SwaggerClient {
                 )
               }
             );
-
             return ((() => {
               if (['get', 'delete', 'head', 'options'].includes(item.method)) {
                 type CallType = (url: string, config: AxiosRequestConfig) => Promise<AxiosResponse>;
