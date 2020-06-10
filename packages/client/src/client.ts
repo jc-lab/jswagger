@@ -154,7 +154,7 @@ export default class SwaggerClient {
               callOptions && (callOptions as ApiRequestOptions);
             const securityContext: IApiSecurityContext | undefined =
               _options['securityContext'] || self._config.securityContext;
-            const optBody: undefined | any = callOptions && callOptions['body'];
+            const optBody: undefined | any = callOptions && callOptions['data'];
             const optParams: { [key: string]: any } | undefined = callOptions && callOptions['params'];
             const reqBody = optBody;
             const baseUrl = apiRequestOptions && apiRequestOptions.baseURL || self._baseUrl;
