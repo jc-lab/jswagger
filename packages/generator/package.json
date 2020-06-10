@@ -1,6 +1,6 @@
 {
   "name": "jswagger-generator",
-  "version": "0.0.13",
+  "version": "0.0.14",
   "description": "",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -42,7 +42,7 @@
     "typescript": "^3.8.3"
   },
   "dependencies": {
-    "jswagger-common": "0.0.13",
+    "jswagger-common": "0.0.14",
     "prettier": "^2.0.5"
   },
   "importSort": {
