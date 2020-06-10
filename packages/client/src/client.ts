@@ -92,6 +92,12 @@ function safePromiseCallback<T>(runner: () => Promise<T>): Promise<T> {
   }
 }
 
+const CONTENT_TYPE_TESTERS = [
+  (data) => Buffer.isBuffer(data) ? 'application/octet-stream' : null,
+  (data) => (typeof data === 'object') ? 'application/json;charset=utf-8' : null,
+  (data) => (typeof data === 'string') ? 'text/plain' : null
+];
+
 export default class SwaggerClient {
   private readonly _config: ISwaggerClientConfig;
   private readonly _baseUrl: string;
@@ -111,6 +117,17 @@ export default class SwaggerClient {
         pathname: config.spec.basePath
       });
     }
+  }
+
+  private _defaultContentTypeResolve(params: IRewriterParams, data: any): string {
+    const r = CONTENT_TYPE_TESTERS.reduce<string | null>((prev, cur) => {
+      if (prev) {
+        return prev;
+      } else {
+        return cur(data);
+      }
+    }, null);
+    return r || 'text/plain';
   }
 
   public api<TAPI>(api: IApiMetadata, options?: ISwaggerApiOptions): TAPI {
@@ -142,202 +159,211 @@ export default class SwaggerClient {
             arg: callOptions
           };
 
-          const doExecute = () => {
-            if (self._config.argRewriter) {
-              const replaced = self._config.argRewriter({
+          return (
+            self._config.contentTypeResolver && self._config.contentTypeResolver(retryParams, callOptions && callOptions.data) ||
+            Promise.resolve(null)
+          ).then(contentType =>
+            contentType || self._defaultContentTypeResolve(retryParams, callOptions && callOptions.data)
+          ).then(contentType => {
+            const doExecute = () => {
+              if (self._config.argRewriter) {
+                const replaced = self._config.argRewriter({
+                  operationId: item.api.operationId,
+                  arg: callOptions && Object.assign({}, callOptions)
+                });
+                callOptions = replaced || callOptions;
+              }
+
+              const apiRequestOptions: ApiRequestOptions | undefined =
+                callOptions && (callOptions as ApiRequestOptions);
+              const securityContext: IApiSecurityContext | undefined =
+                _options['securityContext'] || self._config.securityContext;
+              const optBody: undefined | any = callOptions && callOptions['data'];
+              const optParams: { [key: string]: any } | undefined = callOptions && callOptions['params'];
+              const reqBody = optBody;
+              const baseUrl = apiRequestOptions && apiRequestOptions.baseURL || self._baseUrl;
+
+              const rewriterParams: IRewriterParams = {
                 operationId: item.api.operationId,
-                arg: callOptions && Object.assign({}, callOptions)
+                arg: callOptions
+              };
+
+              let reqHeaders: Record<string, string> = {
+                'content-type': contentType
+              };
+              let reqQueries = {};
+
+              if (optParams) {
+                item.api.parameters.forEach(parameterInfo => {
+                  if (parameterInfo.in === 'header') {
+                    const foundItem = Object.entries(optParams).find(([key, value]) => key === parameterInfo.name);
+                    if (foundItem) {
+                      reqHeaders[parameterInfo.name] = foundItem[1];
+                    }
+                  } else if (parameterInfo.in === 'query') {
+                    const foundItem = Object.entries(optParams).find(([key, value]) => key === parameterInfo.name);
+                    if (foundItem) {
+                      reqQueries[parameterInfo.name] = foundItem[1];
+                    }
+                  } else if (parameterInfo.in === 'path') {
+                    const foundItem = Object.entries(optParams).find(([key, value]) => key === parameterInfo.name);
+                    if (foundItem) {
+                      apiPath = apiPath.replace(`{${parameterInfo.name}}`, foundItem[1]);
+                    }
+                  }
+                });
+              }
+
+              let apiUrl = new url.URL(urlConcat(baseUrl, apiPath));
+              if (apiRequestOptions && apiRequestOptions.protocol) {
+                apiUrl.protocol = apiRequestOptions.protocol;
+              }
+              if (apiRequestOptions && apiRequestOptions.host) {
+                apiUrl.host = apiRequestOptions.host;
+              }
+
+              if (self._config.hostRewriter) {
+                const result = self._config.hostRewriter(rewriterParams);
+                if (result) {
+                  apiUrl.protocol = result.protocol || apiUrl.protocol;
+                  apiUrl.host = result.host || apiUrl.host;
+                }
+              }
+              if (self._config.urlRewriter) {
+                const result = self._config.urlRewriter(rewriterParams, apiUrl);
+                apiUrl = result || apiUrl;
+              }
+
+              let searchParams: QueryNameValue[] = [];
+
+              Object.keys(reqQueries)
+                .forEach(k => {
+                  searchParams.push({
+                    name: k,
+                    value: reqQueries[k]
+                  });
+                });
+
+              if (apiRequestOptions && apiRequestOptions.queries) {
+                searchParams.push(...apiRequestOptions.queries);
+              }
+
+              if (securityContext) {
+                if (securityContext.headerReplacer) {
+                  reqHeaders = securityContext.headerReplacer(reqHeaders);
+                }
+                if (securityContext.queryReplacer) {
+                  searchParams = securityContext.queryReplacer(searchParams);
+                }
+              }
+              if (apiRequestOptions && apiRequestOptions.headers) {
+                Object.assign(reqHeaders, apiRequestOptions.headers);
+              }
+
+              searchParams.forEach(item => {
+                apiUrl.searchParams.append(item.name, item.value);
               });
-              callOptions = replaced || callOptions;
-            }
 
-            const apiRequestOptions: ApiRequestOptions | undefined =
-              callOptions && (callOptions as ApiRequestOptions);
-            const securityContext: IApiSecurityContext | undefined =
-              _options['securityContext'] || self._config.securityContext;
-            const optBody: undefined | any = callOptions && callOptions['data'];
-            const optParams: { [key: string]: any } | undefined = callOptions && callOptions['params'];
-            const reqBody = optBody;
-            const baseUrl = apiRequestOptions && apiRequestOptions.baseURL || self._baseUrl;
-
-            const rewriterParams: IRewriterParams = {
-              operationId: item.api.operationId,
-              arg: callOptions
+              const axioxRequestConfig = Object.assign({}, apiRequestOptions || {});
+              if (axioxRequestConfig['securityContext']) delete axioxRequestConfig['securityContext'];
+              if (axioxRequestConfig['params']) delete axioxRequestConfig['params'];
+              if (axioxRequestConfig['queries']) delete axioxRequestConfig['queries'];
+              if (axioxRequestConfig['data']) delete axioxRequestConfig['data'];
+              if (axioxRequestConfig['baseURL']) delete axioxRequestConfig['baseURL'];
+              Object.assign(
+                axioxRequestConfig,
+                {
+                  responseType: 'arraybuffer',
+                  headers: reqHeaders,
+                  httpAgent: self._config.httpAgent,
+                  httpsAgent: self._config.httpsAgent,
+                  transformResponse: concatHandlers<AxiosTransformer>(
+                    basicTransformResponse,
+                    apiRequestOptions && apiRequestOptions.transformResponse
+                  )
+                }
+              );
+              return ((() => {
+                if (['get', 'delete', 'head', 'options'].includes(item.method)) {
+                  type CallType = (url: string, config: AxiosRequestConfig) => Promise<AxiosResponse>;
+                  return (axios[item.method] as CallType)(apiUrl.toString(), axioxRequestConfig);
+                } else {
+                  type CallType = (url: string, data: any, config: AxiosRequestConfig) => Promise<AxiosResponse>;
+                  return (axios[item.method] as CallType)(apiUrl.toString(), reqBody, axioxRequestConfig);
+                }
+              })())
+                .then(res => {
+                  const responseDefinition = item.api.responses && item.api.responses[res.status.toString()];
+                  const responseRef = responseDefinition && responseDefinition.schema && extractRef(responseDefinition.schema.$ref);
+                  const responseClazz = responseRef && definitionClasses.get(responseRef.name);
+                  const out = Object.assign({}, res);
+                  if (responseClazz) {
+                    out.data = new responseClazz({
+                      schema: res.data
+                    });
+                  } else if (responseDefinition && responseDefinition.schema) {
+                    out.data = leafConvertToClassValue(responseDefinition.schema as any, res.data);
+                  }
+                  return out;
+                })
+                .catch((err: AxiosError) => {
+                  if (err.response) {
+                    const responseDefinition = item.api.responses && item.api.responses[err.response.status.toString()];
+                    const responseRef = responseDefinition && responseDefinition.schema && responseDefinition.schema.$ref;
+                    const responseDefinitionClass = (() => {
+                      const refMatcher = extractRef(responseRef);
+                      if (!refMatcher) {
+                        return undefined;
+                      }
+                      return api.specMetadata.classes
+                        .find(v => api.specMetadata.getSwaggerDefinitionName(v) === refMatcher.name);
+                    })();
+                    const responseVO = responseDefinitionClass ?
+                      new responseDefinitionClass({
+                        schema: err.response.data
+                      }) : err.response.data;
+                    return Promise.reject(new ApiError({
+                      message: responseDefinition ? responseDefinition.description || err.message : err.message,
+                      code: err.code || 'ApiError',
+                      status: err.response.status,
+                      data: responseVO,
+                      headers: err.response.headers,
+                      axiosError: err,
+                      axiosConfig: err.config,
+                      axiosRequest: err.request,
+                      axiosResponse: err.response
+                    }));
+                  } else {
+                    return Promise.reject(err);
+                  }
+                });
             };
 
-            let reqHeaders = {};
-            let reqQueries = {};
-
-            if (optParams) {
-              item.api.parameters.forEach(parameterInfo => {
-                if (parameterInfo.in === 'header') {
-                  const foundItem = Object.entries(optParams).find(([key, value]) => key === parameterInfo.name);
-                  if (foundItem) {
-                    reqHeaders[parameterInfo.name] = foundItem[1];
+            const doExecuteWithRetry = (resolve, reject) => {
+              doExecute()
+                .then(resolve)
+                .catch(e => {
+                  if (self._config.retryHandler) {
+                    safePromiseCallback(self._config.retryHandler.bind(null, retryParams, retryCount++, e))
+                      .then(delay => {
+                        if (delay < 0 || delay === false) {
+                          reject(e);
+                        } else if (delay === 0) {
+                          doExecuteWithRetry(resolve, reject);
+                        } else {
+                          setTimeout(() => doExecuteWithRetry(resolve, reject), delay);
+                        }
+                      })
+                      .catch(reject);
+                  } else {
+                    reject(e);
                   }
-                } else if (parameterInfo.in === 'query') {
-                  const foundItem = Object.entries(optParams).find(([key, value]) => key === parameterInfo.name);
-                  if (foundItem) {
-                    reqQueries[parameterInfo.name] = foundItem[1];
-                  }
-                } else if (parameterInfo.in === 'path') {
-                  const foundItem = Object.entries(optParams).find(([key, value]) => key === parameterInfo.name);
-                  if (foundItem) {
-                    apiPath = apiPath.replace(`{${parameterInfo.name}}`, foundItem[1]);
-                  }
-                }
-              });
-            }
-
-            let apiUrl = new url.URL(urlConcat(baseUrl, apiPath));
-            if (apiRequestOptions && apiRequestOptions.protocol) {
-              apiUrl.protocol = apiRequestOptions.protocol;
-            }
-            if (apiRequestOptions && apiRequestOptions.host) {
-              apiUrl.host = apiRequestOptions.host;
-            }
-
-            if (self._config.hostRewriter) {
-              const result = self._config.hostRewriter(rewriterParams);
-              if (result) {
-                apiUrl.protocol = result.protocol || apiUrl.protocol;
-                apiUrl.host = result.host || apiUrl.host;
-              }
-            }
-            if (self._config.urlRewriter) {
-              const result = self._config.urlRewriter(rewriterParams, apiUrl);
-              apiUrl = result || apiUrl;
-            }
-
-            let searchParams: QueryNameValue[] = [];
-
-            Object.keys(reqQueries)
-              .forEach(k => {
-                searchParams.push({
-                  name: k,
-                  value: reqQueries[k]
                 });
-              });
+            };
 
-            if (apiRequestOptions && apiRequestOptions.queries) {
-              searchParams.push(...apiRequestOptions.queries);
-            }
-
-            if (securityContext) {
-              if (securityContext.headerReplacer) {
-                reqHeaders = securityContext.headerReplacer(reqHeaders);
-              }
-              if (securityContext.queryReplacer) {
-                searchParams = securityContext.queryReplacer(searchParams);
-              }
-            }
-            if (apiRequestOptions && apiRequestOptions.headers) {
-              Object.assign(reqHeaders, apiRequestOptions.headers);
-            }
-
-            searchParams.forEach(item => {
-              apiUrl.searchParams.append(item.name, item.value);
+            return new Promise<AxiosResponse>((resolve, reject) => {
+              doExecuteWithRetry(resolve, reject);
             });
-
-            const axioxRequestConfig = Object.assign({}, apiRequestOptions || {});
-            if (axioxRequestConfig['securityContext']) delete axioxRequestConfig['securityContext'];
-            if (axioxRequestConfig['params']) delete axioxRequestConfig['params'];
-            if (axioxRequestConfig['queries']) delete axioxRequestConfig['queries'];
-            if (axioxRequestConfig['data']) delete axioxRequestConfig['data'];
-            if (axioxRequestConfig['baseURL']) delete axioxRequestConfig['baseURL'];
-            Object.assign(
-              axioxRequestConfig,
-              {
-                responseType: 'arraybuffer',
-                headers: reqHeaders,
-                httpAgent: self._config.httpAgent,
-                httpsAgent: self._config.httpsAgent,
-                transformResponse: concatHandlers<AxiosTransformer>(
-                  basicTransformResponse,
-                  apiRequestOptions && apiRequestOptions.transformResponse
-                )
-              }
-            );
-            return ((() => {
-              if (['get', 'delete', 'head', 'options'].includes(item.method)) {
-                type CallType = (url: string, config: AxiosRequestConfig) => Promise<AxiosResponse>;
-                return (axios[item.method] as CallType)(apiUrl.toString(), axioxRequestConfig);
-              } else {
-                type CallType = (url: string, data: any, config: AxiosRequestConfig) => Promise<AxiosResponse>;
-                return (axios[item.method] as CallType)(apiUrl.toString(), reqBody, axioxRequestConfig);
-              }
-            })())
-              .then(res => {
-                const responseDefinition = item.api.responses && item.api.responses[res.status.toString()];
-                const responseRef = responseDefinition && responseDefinition.schema && extractRef(responseDefinition.schema.$ref);
-                const responseClazz = responseRef && definitionClasses.get(responseRef.name);
-                const out = Object.assign({}, res);
-                if (responseClazz) {
-                  out.data = new responseClazz({
-                    schema: res.data
-                  });
-                } else if (responseDefinition && responseDefinition.schema) {
-                  out.data = leafConvertToClassValue(responseDefinition.schema as any, res.data);
-                }
-                return out;
-              })
-              .catch((err: AxiosError) => {
-                if (err.response) {
-                  const responseDefinition = item.api.responses && item.api.responses[err.response.status.toString()];
-                  const responseRef = responseDefinition && responseDefinition.schema && responseDefinition.schema.$ref;
-                  const responseDefinitionClass = (() => {
-                    const refMatcher = extractRef(responseRef);
-                    if (!refMatcher) {
-                      return undefined;
-                    }
-                    return api.specMetadata.classes
-                      .find(v => api.specMetadata.getSwaggerDefinitionName(v) === refMatcher.name);
-                  })();
-                  const responseVO = responseDefinitionClass ?
-                    new responseDefinitionClass({
-                      schema: err.response.data
-                    }) : err.response.data;
-                  return Promise.reject(new ApiError({
-                    message: responseDefinition ? responseDefinition.description || err.message : err.message,
-                    code: err.code || 'ApiError',
-                    status: err.response.status,
-                    data: responseVO,
-                    headers: err.response.headers,
-                    axiosError: err,
-                    axiosConfig: err.config,
-                    axiosRequest: err.request,
-                    axiosResponse: err.response
-                  }));
-                } else {
-                  return Promise.reject(err);
-                }
-              });
-          };
-
-          const doExecuteWithRetry = (resolve, reject) => {
-            doExecute()
-              .then(resolve)
-              .catch(e => {
-                if (self._config.retryHandler) {
-                  safePromiseCallback(self._config.retryHandler.bind(null, retryParams, retryCount++, e))
-                    .then(delay => {
-                      if (delay < 0 || delay === false) {
-                        reject(e);
-                      } else if (delay === 0) {
-                        doExecuteWithRetry(resolve, reject);
-                      } else {
-                        setTimeout(() => doExecuteWithRetry(resolve, reject), delay);
-                      }
-                    })
-                    .catch(reject);
-                } else {
-                  reject(e);
-                }
-              });
-          };
-
-          return new Promise<AxiosResponse>((resolve, reject) => {
-            doExecuteWithRetry(resolve, reject);
           });
         }
       });

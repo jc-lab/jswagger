@@ -31,6 +31,13 @@ export type ArgRewriter = (params: IRewriterParams) => ApiRequestOptionsOO<any, 
  */
 export type RetryHandler = (params: IRewriterParams, retryCount: number, err: any) => Promise<number | false>;
 
+/**
+ * @return
+ *  string : content-type
+ *  null : use default resolver
+ */
+export type ContentTypeResolver = (params: IRewriterParams, data: any) => Promise<string | null>;
+
 export interface ISwaggerClientConfig {
   spec: OpenAPI2;
   protocol?: string;
@@ -43,6 +50,7 @@ export interface ISwaggerClientConfig {
   hostRewriter?: HostRewriter;
   urlRewriter?: UrlRewriter;
   retryHandler?: RetryHandler;
+  contentTypeResolver?: ContentTypeResolver;
 }
 
 export interface ISwaggerApiOptions {
