@@ -49,7 +49,7 @@ export interface ISwaggerApiOptions {
   securityContext?: IApiSecurityContext;
 }
 
-export interface QueryKeyValue {
+export interface QueryNameValue {
   name: string;
   value: string;
 }
@@ -66,7 +66,7 @@ export interface ApiRequestOptions extends AxiosRequestConfig {
    */
   host?: string;
   securityContext?: IApiSecurityContext;
-  queries?: QueryKeyValue[];
+  queries?: QueryNameValue[];
 }
 
 export interface ApiRequestOptionsRX<T, P> extends ApiRequestOptions {
@@ -108,7 +108,7 @@ export interface ApiResponse<T, H> extends AxiosResponse<T> {
 export type AnyKeyValueType = {[key: string]: any};
 export interface IApiSecurityContext {
   headerReplacer?: (input: AnyKeyValueType) => AnyKeyValueType;
-  queryReplacer?: (input: AnyKeyValueType) => AnyKeyValueType;
+  queryReplacer?: (input: QueryNameValue[]) => QueryNameValue[];
 }
 
 const S_API_ERROR = Symbol('ApiError');

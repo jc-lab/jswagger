@@ -10,7 +10,7 @@ import {
   IApiSecurityContext,
   IRewriterParams,
   ISwaggerApiOptions,
-  ISwaggerClientConfig
+  ISwaggerClientConfig, QueryNameValue
 } from './types';
 import {
   findApisByTag
@@ -209,31 +209,39 @@ export default class SwaggerClient {
               apiUrl = result || apiUrl;
             }
 
+            let searchParams: QueryNameValue[] = [];
+
+            Object.keys(reqQueries)
+              .forEach(k => {
+                searchParams.push({
+                  name: k,
+                  value: reqQueries[k]
+                });
+              });
+
+            if (apiRequestOptions && apiRequestOptions.queries) {
+              searchParams.push(...apiRequestOptions.queries);
+            }
+
             if (securityContext) {
               if (securityContext.headerReplacer) {
                 reqHeaders = securityContext.headerReplacer(reqHeaders);
               }
               if (securityContext.queryReplacer) {
-                reqQueries = securityContext.queryReplacer(reqQueries);
+                searchParams = securityContext.queryReplacer(searchParams);
               }
-            }
-
-            Object.keys(reqQueries)
-              .forEach(k => {
-                apiUrl.searchParams.append(k, reqQueries[k]);
-              });
-
-            if (apiRequestOptions && apiRequestOptions.queries) {
-              apiRequestOptions.queries.forEach(o => {
-                apiUrl.searchParams.append(o.name, o.value);
-              });
             }
             if (apiRequestOptions && apiRequestOptions.headers) {
               Object.assign(reqHeaders, apiRequestOptions.headers);
             }
 
+            searchParams.forEach(item => {
+              apiUrl.searchParams.append(item.name, item.value);
+            });
+
             const axioxRequestConfig = Object.assign({}, apiRequestOptions || {});
             if (axioxRequestConfig['securityContext']) delete axioxRequestConfig['securityContext'];
+            if (axioxRequestConfig['params']) delete axioxRequestConfig['params'];
             if (axioxRequestConfig['queries']) delete axioxRequestConfig['queries'];
             if (axioxRequestConfig['data']) delete axioxRequestConfig['data'];
             if (axioxRequestConfig['baseURL']) delete axioxRequestConfig['baseURL'];
